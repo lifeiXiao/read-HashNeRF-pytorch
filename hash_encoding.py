@@ -4,19 +4,21 @@ import torch.nn as nn
 from utils import get_voxel_vertices
 
 
-class HashEmbedder(nn.Module):
+class HashEmbedder(nn.Module): #继承自nn.Module，pytorch深度学习框架的基类
     def __init__(self, bounding_box, n_levels=16, n_features_per_level=2,
                  log2_hashmap_size=19, base_resolution=16, finest_resolution=512):
         """
         bounding_box: 跟特定场景有关的参数
-        n_levels: 论文中的L
-        n_features_per_level: 论文中的F
+        n_levels: 论文中的L,层级数
+        n_features_per_level: 论文中的F，每层的特征数
         log2_hashmap_size: 论文中的T参数的指数值 ,超参数
         base_resolution: 就是Nmin, 16
         finest_resolution: Nmax, 超参数
         """
         super(HashEmbedder, self).__init__()
         # 场景的bbox
+
+        #设置了传入的参数，并计算了输出维度 
         self.bounding_box = bounding_box
 
         self.n_levels = n_levels
@@ -26,24 +28,30 @@ class HashEmbedder(nn.Module):
         self.log2_hashmap_size = log2_hashmap_size
 
         self.base_resolution = torch.tensor(base_resolution)
-
+        
         self.finest_resolution = torch.tensor(finest_resolution)
-        # 一共16层，每层的特征长度是F=2, 因此这里是32
+        # 一共16层，每层的特征长度是F=2, 因此这里是32 #输出维度（由层级数和每层特征数决定）
         self.out_dim = self.n_levels * self.n_features_per_level
 
         # 论文中的公式3
+        #计算每个层级的分辨率
+        # 根据基本分别率和最细分辨率确定每个层级的分辨率
+                     
         self.b = torch.exp((torch.log(self.finest_resolution) - torch.log(self.base_resolution)) / (n_levels - 1))
 
+        #创建了一个嵌入层，每个层级都有一个嵌入层，嵌入曾的大小由哈希表的大小决定，每个嵌入有特定数量的特征。
         # 16个Embedding,大小是T，这里的维度是 [2**19,2]
         self.embeddings = nn.ModuleList([nn.Embedding(2 ** self.log2_hashmap_size,
                                                       self.n_features_per_level) for i in range(n_levels)])
 
         # custom uniform initialization
         # embeddings 参数的初始化
+        #对每个嵌入层，都进行初始化，要保证初始值接近0但不完全相同
         for i in range(n_levels):
             nn.init.uniform_(self.embeddings[i].weight, a=-0.0001, b=0.0001)
             # self.embeddings[i].weight.data.zero_()
 
+    #trilinear_interp是 
     def trilinear_interp(self, x, voxel_min_vertex, voxel_max_vertex, voxel_embedds):
         """
         立方体8个点的三线性插值的计算
