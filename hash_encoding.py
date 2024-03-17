@@ -51,7 +51,7 @@ class HashEmbedder(nn.Module): #继承自nn.Module，pytorch深度学习框架�
             nn.init.uniform_(self.embeddings[i].weight, a=-0.0001, b=0.0001)
             # self.embeddings[i].weight.data.zero_()
 
-    #trilinear_interp是 
+    #trilinear_interp是一个执行三线性插值的方法，用于在3D空间平滑的插值，它接受一个点X和它所在的体素的相关信息，然后基于这些信息计算该点的嵌入值
     def trilinear_interp(self, x, voxel_min_vertex, voxel_max_vertex, voxel_embedds):
         """
         立方体8个点的三线性插值的计算
@@ -79,10 +79,12 @@ class HashEmbedder(nn.Module): #继承自nn.Module，pytorch深度学习框架�
 
         return c
 
+    # forward方法是模型的核心，它定义了输入数据是如何通过网络传递，对于每个输入点，它在每个层级上，执行哈希查找
+    #和三线性插值，然后将这些结果连接起来形成最终的特征向量
     def forward(self, x):
         # x is 3D point position: B x 3
         x_embedded_all = []
-        # n_levels is 16
+        # n_levels is 16 16个层级
         for i in range(self.n_levels):
             # base_resolution 16
             # b 1.2599 论文中的公式3, resolution 就是论文中的公式2的Nl
@@ -107,6 +109,7 @@ class HashEmbedder(nn.Module): #继承自nn.Module，pytorch深度学习框架�
 # ----------------------------------------------------------------------------------------------------------------------
 
 # 视角方向的编码
+#SHEcoder类用于球谐编码，这是一种在图形学中常用的技术，它初始化了一些参数和系数，这些系数用于计算输入方向的球谐特征
 class SHEncoder(nn.Module):
     def __init__(self, input_dim=3, degree=4):
         """
@@ -153,6 +156,7 @@ class SHEncoder(nn.Module):
             0.6258357354491761
         ]
 
+    #forward方法计算输入向量的球谐特征，这个过程涉及到使用球谐系数和输入向量的x,y,z分量来计算特征值
     def forward(self, input, **kwargs):
 
         result = torch.empty((*input.shape[:-1], self.out_dim), dtype=input.dtype, device=input.device)
